@@ -24,7 +24,6 @@ class WPSC_Google_Analytics {
 			   (bool) get_option( 'wpsc_ga_disable_tracking' )
 			|| ( ! $this->is_theme_tracking && empty( $this->tracking_id ) );
 
-		// TODO: make it work with new theme engine as well
 		if ( ! $this->is_analytics_disabled )
 			add_action( 'wpsc_transaction_results_shutdown', array( $this, 'print_script' ), 10, 3 );
 	}
@@ -52,7 +51,7 @@ class WPSC_Google_Analytics {
 	 * @param $purchase_log      Purchase Log object
 	 * @param $session_id        Session ID
 	 * @param $display_to_screen Whether or not the output is displayed to the screen
-	 *
+	 * 
 	 * @since 3.8.9
 	 * @return javascript
 	 */
@@ -163,17 +162,17 @@ class WPSC_Google_Analytics {
 
 		add_filter( 'wpsc_toggle_display_currency_code', array( $this, 'remove_currency_and_html' ) );
 
-		$output .= "
-			_gaq.push(['_addTrans',
-			'" . $purchase_id . "',                                     // order ID - required
-			'" . wp_specialchars_decode( $this->get_site_name() ) . "', // affiliation or store name
-			'" . wpsc_currency_display( $purchase->totalprice ) . "',   // total - required
-			'" . wpsc_currency_display( $total_tax ) . "',              // tax
-			'" . wpsc_currency_display( $total_shipping ) . "',         // shipping
-			'" . wp_specialchars_decode( $city ) . "',                  // city
-			'" . wp_specialchars_decode( $state ) . "',                 // state or province
-			'" . wp_specialchars_decode( $country ) . "'                // country
-  		]);\n\r";
+
+  		
+  		$output .= "
+			ga('ecommerce:addTransaction', {
+			'id': '" . $purchase_id . "',
+			'affiliation': '" . wp_specialchars_decode( $this->get_site_name() ) . "',
+			'revenue': '" . wpsc_currency_display( $purchase->totalprice ) . "',	
+			'shipping': '" . wpsc_currency_display( $total_shipping ) . "',
+			'tax': '" . wpsc_currency_display( $total_tax ) . "'
+  		});\n\r";
+  		
 
 		remove_filter( 'wpsc_toggle_display_currency_code', array( $this, 'remove_currency_and_html' ) );
 
@@ -192,16 +191,23 @@ class WPSC_Google_Analytics {
 
 			$item = array_map( 'wp_specialchars_decode', $item );
 
-			$output .= "_gaq.push(['_addItem',"
-			. "'" . $purchase_id . "',"		    // Order ID
-			. "'" . $item['sku'] . "',"			// Item SKU
-			. "'" . $item['name'] . "',"		// Item Name
-			. "'" . $item['category'] . "',"	// Item Category
-			. "'" . $item['price'] . "',"		// Item Price
-			. "'" . $item['quantity'] . "']);\n\r";	// Item Quantity
+	
+			
+			$output .= "ga('ecommerce:addItem', {"
+			. "'id': '" . $purchase_id . "',"		    // Order ID
+			. "'name': '" . $item['name'] . "',"		// Item Name
+			. "'sku': '" . $item['sku'] . "',"			// Item SKU		
+			. "'category': '" . $item['category'] . "',"	// Item Category
+			. "'price': '" . $item['price'] . "',"		// Item Price
+			. "'quantity': '" . $item['quantity'] . "'});\n\r";	// Item Quantity
+			
 		}
 
-		$output .= "_gaq.push(['_trackTrans']);\n\r";
+		
+		$output .= "ga('ecommerce:send');\n\r";
+		
+		
+		 
 
 		if ( $this->is_theme_tracking || $this->advanced_code )
 			$output .= "</script>\n\r";
